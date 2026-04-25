@@ -112,3 +112,76 @@ MainTab:CreateInput({
 player.CharacterAdded:Connect(function(char)
     character = char
 end)
+---------------------------------------------------
+-- 👁️ ESP SYSTEM
+---------------------------------------------------
+local ESPEnabled = false
+local ESPObjects = {}
+
+local function createESP(player)
+    if player == Players.LocalPlayer then return end
+
+    local function add(char)
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "CoolESP"
+        highlight.FillColor = Color3.fromRGB(255, 0, 0)
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.FillTransparency = 0.5
+        highlight.OutlineTransparency = 0
+        highlight.Adornee = char
+        highlight.Parent = char
+
+        ESPObjects[player] = highlight
+    end
+
+    if player.Character then
+        add(player.Character)
+    end
+
+    player.CharacterAdded:Connect(function(char)
+        if ESPEnabled then
+            add(char)
+        end
+    end)
+end
+
+local function enableESP()
+    for _, p in pairs(Players:GetPlayers()) do
+        createESP(p)
+    end
+end
+
+local function disableESP()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p.Character then
+            local esp = p.Character:FindFirstChild("CoolESP")
+            if esp then
+                esp:Destroy()
+            end
+        end
+    end
+    ESPObjects = {}
+end
+
+Players.PlayerAdded:Connect(function(p)
+    if ESPEnabled then
+        createESP(p)
+    end
+end)
+
+---------------------------------------------------
+-- 🔘 ESP TOGGLE
+---------------------------------------------------
+MainTab:CreateToggle({
+   Name = "ESP (See Players)",
+   CurrentValue = false,
+   Callback = function(Value)
+      ESPEnabled = Value
+
+      if ESPEnabled then
+         enableESP()
+      else
+         disableESP()
+      end
+   end
+})
