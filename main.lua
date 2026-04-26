@@ -6,8 +6,11 @@ local TeleportService = game:GetService("TeleportService")
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
 
+---------------------------------------------------
 -- UI
+---------------------------------------------------
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
@@ -51,15 +54,13 @@ MainTab:CreateSlider({
    Increment = 1,
    CurrentValue = 16,
    Callback = function(Value)
-      character:WaitForChild("Humanoid").WalkSpeed = Value
+      humanoid.WalkSpeed = Value
    end
 })
 
 ---------------------------------------------------
 -- 🦘 JUMP POWER
 ---------------------------------------------------
-local humanoid = character:WaitForChild("Humanoid")
-
 MainTab:CreateSlider({
    Name = "Jump Power",
    Range = {50, 200},
@@ -72,34 +73,59 @@ MainTab:CreateSlider({
 })
 
 ---------------------------------------------------
--- 🕊️ CAMERA FLY (NO PIECES)
+-- 🕊️ BODYVELOCITY FLY (MIXED)
 ---------------------------------------------------
 local flying = false
-local flySpeed = 2
+local flySpeed = 60
 local camera = workspace.CurrentCamera
+local bv
+
+local function startFly()
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    if bv then bv:Destroy() end
+
+    bv = Instance.new("BodyVelocity")
+    bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+    bv.Velocity = Vector3.zero
+    bv.Parent = root
+end
+
+local function stopFly()
+    if bv then
+        bv:Destroy()
+        bv = nil
+    end
+end
 
 RunService.RenderStepped:Connect(function()
-    if flying and character then
+    if flying and character and bv then
         local root = character:FindFirstChild("HumanoidRootPart")
         if root then
-            root.CFrame = root.CFrame + (camera.CFrame.LookVector * flySpeed)
+            bv.Velocity = camera.CFrame.LookVector * flySpeed
         end
     end
 end)
 
 MainTab:CreateToggle({
-   Name = "Camera Fly",
+   Name = "BodyVelocity Fly",
    CurrentValue = false,
    Callback = function(Value)
       flying = Value
+      if flying then
+         startFly()
+      else
+         stopFly()
+      end
    end
 })
 
 MainTab:CreateSlider({
    Name = "Fly Speed",
-   Range = {1, 10},
-   Increment = 1,
-   CurrentValue = 2,
+   Range = {10, 200},
+   Increment = 5,
+   CurrentValue = flySpeed,
    Callback = function(Value)
       flySpeed = Value
    end
@@ -111,7 +137,6 @@ MainTab:CreateSlider({
 MainTab:CreateButton({
    Name = "Kill / Reset",
    Callback = function()
-      local humanoid = character:FindFirstChildOfClass("Humanoid")
       if humanoid then
          humanoid.Health = 0
       end
@@ -162,4 +187,17 @@ MainTab:CreateInput({
 player.CharacterAdded:Connect(function(char)
     character = char
     humanoid = char:WaitForChild("Humanoid")
+
+    task.wait(0.5)
+
+    if flying then
+        local root = character:WaitForChild("HumanoidRootPart")
+
+        if bv then bv:Destroy() end
+
+        bv = Instance.new("BodyVelocity")
+        bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+        bv.Velocity = Vector3.zero
+        bv.Parent = root
+    end
 end)
