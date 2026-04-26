@@ -21,7 +21,11 @@ local Window = Rayfield:CreateWindow({
 })
 
 local MainTab = Window:CreateTab("Main", 4483362458)
+---------------------------------------------------
+-- 🎨 VISUAL TAB
+---------------------------------------------------
 
+local VisualTab = Window:CreateTab("Visual", 4483362458)
 ---------------------------------------------------
 -- 🚪 NOCLIP
 ---------------------------------------------------
@@ -201,3 +205,38 @@ player.CharacterAdded:Connect(function(char)
         bv.Parent = root
     end
 end)
+---------------------------------------------------
+-- 🌟 BRIGHT MODE TOGGLE
+---------------------------------------------------
+
+local function setBright(state)
+    if state then
+        game.Lighting.Brightness = 3
+        game.Lighting.ClockTime = 14
+        game.Lighting.FogEnd = 100000
+
+        Rayfield:Notify({
+            Title = "Visual",
+            Content = "Bright Mode Enabled 🌟",
+            Duration = 2
+        })
+    else
+        game.Lighting.Brightness = 2
+        game.Lighting.ClockTime = 12
+        game.Lighting.FogEnd = 1000
+
+        Rayfield:Notify({
+            Title = "Visual",
+            Content = "Bright Mode Disabled 🌙",
+            Duration = 2
+        })
+    end
+end
+
+VisualTab:CreateToggle({
+   Name = "🌟 Bright Mode",
+   CurrentValue = false,
+   Callback = function(Value)
+      setBright(Value)
+   end
+})
