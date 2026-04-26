@@ -185,3 +185,30 @@ MainTab:CreateToggle({
       end
    end
 })
+
+---------------------------------------------------
+-- 🦘 JUMP SETTINGS
+---------------------------------------------------
+local humanoid = character:WaitForChild("Humanoid")
+
+MainTab:CreateSlider({
+   Name = "Jump Power",
+   Range = {50, 200},
+   Increment = 5,
+   CurrentValue = humanoid.JumpPower,
+   Callback = function(Value)
+      humanoid.UseJumpPower = true
+      humanoid.JumpPower = Value
+   end
+})
+
+MainTab:CreateSlider({
+   Name = "Jump Height",
+   Range = {7, 100},
+   Increment = 1,
+   CurrentValue = humanoid.JumpHeight,
+   Callback = function(Value)
+      humanoid.UseJumpPower = false
+      humanoid.JumpHeight = Value
+   end
+})
