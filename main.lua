@@ -5,9 +5,19 @@ local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
+local character
+local humanoid
 
--- Load UI
+-- CHARACTER SETUP (RESPAWN SAFE)
+local function setupCharacter(char)
+    character = char
+    humanoid = char:WaitForChild("Humanoid")
+end
+
+setupCharacter(player.Character or player.CharacterAdded:Wait())
+player.CharacterAdded:Connect(setupCharacter)
+
+-- UI
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
@@ -20,7 +30,7 @@ local Window = Rayfield:CreateWindow({
 local MainTab = Window:CreateTab("Main", 4483362458)
 
 ---------------------------------------------------
--- NOCLIP
+-- 🚪 NOCLIP
 ---------------------------------------------------
 local noclip = false
 
@@ -43,7 +53,7 @@ MainTab:CreateToggle({
 })
 
 ---------------------------------------------------
--- WALKSPEED
+-- 🎚️ WALKSPEED
 ---------------------------------------------------
 MainTab:CreateSlider({
    Name = "WalkSpeed",
@@ -51,17 +61,47 @@ MainTab:CreateSlider({
    Increment = 1,
    CurrentValue = 16,
    Callback = function(Value)
-      character:WaitForChild("Humanoid").WalkSpeed = Value
+      if humanoid then
+         humanoid.WalkSpeed = Value
+      end
    end
 })
 
 ---------------------------------------------------
--- KILL PLAYER
+-- 🦘 JUMP SYSTEM
+---------------------------------------------------
+MainTab:CreateSlider({
+   Name = "Jump Power",
+   Range = {50, 200},
+   Increment = 5,
+   CurrentValue = 50,
+   Callback = function(Value)
+      if humanoid then
+         humanoid.UseJumpPower = true
+         humanoid.JumpPower = Value
+      end
+   end
+})
+
+MainTab:CreateSlider({
+   Name = "Jump Height",
+   Range = {7, 100},
+   Increment = 1,
+   CurrentValue = 7,
+   Callback = function(Value)
+      if humanoid then
+         humanoid.UseJumpPower = false
+         humanoid.JumpHeight = Value
+      end
+   end
+})
+
+---------------------------------------------------
+-- 💀 KILL PLAYER
 ---------------------------------------------------
 MainTab:CreateButton({
    Name = "Kill / Reset",
    Callback = function()
-      local humanoid = character:FindFirstChildOfClass("Humanoid")
       if humanoid then
          humanoid.Health = 0
       end
@@ -69,7 +109,7 @@ MainTab:CreateButton({
 })
 
 ---------------------------------------------------
--- REJOIN
+-- 🔁 REJOIN
 ---------------------------------------------------
 MainTab:CreateButton({
    Name = "Rejoin Server",
@@ -79,7 +119,7 @@ MainTab:CreateButton({
 })
 
 ---------------------------------------------------
--- MONEY
+-- 💰 MONEY
 ---------------------------------------------------
 local function getStat(name)
     local stats = player:FindFirstChild("leaderstats")
@@ -107,47 +147,27 @@ MainTab:CreateInput({
 })
 
 ---------------------------------------------------
--- RESPAWN FIX
----------------------------------------------------
-player.CharacterAdded:Connect(function(char)
-    character = char
-end)
----------------------------------------------------
 -- 👁️ ESP SYSTEM
 ---------------------------------------------------
 local ESPEnabled = false
-local ESPObjects = {}
 
-local function createESP(player)
-    if player == Players.LocalPlayer then return end
+local function addESP(char)
+    if char:FindFirstChild("CoolESP") then return end
 
-    local function add(char)
-        local highlight = Instance.new("Highlight")
-        highlight.Name = "CoolESP"
-        highlight.FillColor = Color3.fromRGB(255, 0, 0)
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-        highlight.FillTransparency = 0.5
-        highlight.OutlineTransparency = 0
-        highlight.Adornee = char
-        highlight.Parent = char
-
-        ESPObjects[player] = highlight
-    end
-
-    if player.Character then
-        add(player.Character)
-    end
-
-    player.CharacterAdded:Connect(function(char)
-        if ESPEnabled then
-            add(char)
-        end
-    end)
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "CoolESP"
+    highlight.FillColor = Color3.fromRGB(255, 0, 0)
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.5
+    highlight.Adornee = char
+    highlight.Parent = char
 end
 
 local function enableESP()
     for _, p in pairs(Players:GetPlayers()) do
-        createESP(p)
+        if p ~= player and p.Character then
+            addESP(p.Character)
+        end
     end
 end
 
@@ -155,60 +175,28 @@ local function disableESP()
     for _, p in pairs(Players:GetPlayers()) do
         if p.Character then
             local esp = p.Character:FindFirstChild("CoolESP")
-            if esp then
-                esp:Destroy()
-            end
+            if esp then esp:Destroy() end
         end
     end
-    ESPObjects = {}
 end
 
 Players.PlayerAdded:Connect(function(p)
-    if ESPEnabled then
-        createESP(p)
-    end
+    p.CharacterAdded:Connect(function(char)
+        if ESPEnabled then
+            addESP(char)
+        end
+    end)
 end)
 
----------------------------------------------------
--- 🔘 ESP TOGGLE
----------------------------------------------------
 MainTab:CreateToggle({
-   Name = "ESP (See Players)",
+   Name = "ESP",
    CurrentValue = false,
    Callback = function(Value)
       ESPEnabled = Value
-
-      if ESPEnabled then
+      if Value then
          enableESP()
       else
          disableESP()
       end
-   end
-})
-
----------------------------------------------------
--- 🦘 JUMP SETTINGS
----------------------------------------------------
-local humanoid = character:WaitForChild("Humanoid")
-
-MainTab:CreateSlider({
-   Name = "Jump Power",
-   Range = {50, 200},
-   Increment = 5,
-   CurrentValue = humanoid.JumpPower,
-   Callback = function(Value)
-      humanoid.UseJumpPower = true
-      humanoid.JumpPower = Value
-   end
-})
-
-MainTab:CreateSlider({
-   Name = "Jump Height",
-   Range = {7, 100},
-   Increment = 1,
-   CurrentValue = humanoid.JumpHeight,
-   Callback = function(Value)
-      humanoid.UseJumpPower = false
-      humanoid.JumpHeight = Value
    end
 })
