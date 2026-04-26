@@ -19,12 +19,57 @@ local Window = Rayfield:CreateWindow({
    LoadingSubtitle = "Keyless",
    ConfigurationSaving = {Enabled = false}
 })
+---------------------------------------------------
+-- 👁️ ESP SYSTEM
+---------------------------------------------------
 
+local ESPEnabled = false
+local ESPObjects = {}
 local MainTab = Window:CreateTab("Main", 4483362458)
 ---------------------------------------------------
 -- 🎨 VISUAL TAB
 ---------------------------------------------------
+local function createESP(plr)
+    if plr == player then return end
 
+    local function apply(char)
+        if not ESPEnabled then return end
+
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "ESP_Highlight"
+        highlight.FillColor = Color3.fromRGB(255, 0, 0)
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.FillTransparency = 0.5
+        highlight.Parent = char
+
+        local billboard = Instance.new("BillboardGui")
+        billboard.Name = "ESP_Name"
+        billboard.Size = UDim2.new(0, 200, 0, 50)
+        billboard.StudsOffset = Vector3.new(0, 3, 0)
+        billboard.AlwaysOnTop = true
+        billboard.Parent = char:FindFirstChild("Head") or char
+
+        local text = Instance.new("TextLabel")
+        text.Size = UDim2.new(1, 0, 1, 0)
+        text.BackgroundTransparency = 1
+        text.TextScaled = true
+        text.TextColor3 = Color3.fromRGB(255, 255, 255)
+        text.TextStrokeTransparency = 0
+        text.Text = plr.Name
+        text.Parent = billboard
+
+        ESPObjects[plr] = {highlight, billboard}
+    end
+
+    if plr.Character then
+        apply(plr.Character)
+    end
+
+    plr.CharacterAdded:Connect(function(char)
+        task.wait(0.5)
+        apply(char)
+    end)
+end
 local VisualTab = Window:CreateTab("Visual", 4483362458)
 ---------------------------------------------------
 -- 🚪 NOCLIP
@@ -238,5 +283,31 @@ VisualTab:CreateToggle({
    CurrentValue = false,
    Callback = function(Value)
       setBright(Value)
+   end
+})
+local function setESP(state)
+    ESPEnabled = state
+
+    if state then
+        for _, plr in pairs(Players:GetPlayers()) do
+            createESP(plr)
+        end
+    else
+        for _, obj in pairs(ESPObjects) do
+            for _, v in pairs(obj) do
+                if v then v:Destroy() end
+            end
+        end
+        ESPObjects = {}
+    end
+end
+Players.PlayerAdded:Connect(function(plr)
+    createESP(plr)
+end)
+VisualTab:CreateToggle({
+   Name = "👁️ ESP Players",
+   CurrentValue = false,
+   Callback = function(Value)
+      setESP(Value)
    end
 })
