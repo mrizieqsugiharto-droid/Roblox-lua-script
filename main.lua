@@ -1,5 +1,11 @@
 repeat task.wait() until game:IsLoaded()
+print("HUB WORKING")
 
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "Cool Hub",
+    Text = "Loaded successfully!",
+    Duration = 5
+})
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
