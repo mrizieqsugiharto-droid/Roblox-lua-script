@@ -1,16 +1,10 @@
 repeat task.wait() until game:IsLoaded()
-print("HUB WORKING")
-
-game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "Cool Hub",
-    Text = "Loaded successfully!",
-    Duration = 5
-})
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
@@ -96,11 +90,12 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Window = Rayfield:CreateWindow({
     Name = "Cool Hub",
     LoadingTitle = "Cool Hub",
-    LoadingSubtitle = "Final Version",
+    LoadingSubtitle = "Final + Visual",
     ConfigurationSaving = {Enabled = false}
 })
 
 local MainTab = Window:CreateTab("Main", 4483362458)
+local VisualTab = Window:CreateTab("Visual", 4483362458)
 local Knockouttabs = Window:CreateTab("Knockout", 4483362458)
 
 ---------------------------------------------------
@@ -118,7 +113,6 @@ Knockouttabs:CreateToggle({
 -- 🚪 NOCLIP
 ---------------------------------------------------
 local noclip = false
-
 RunService.Stepped:Connect(function()
     if noclip and character then
         for _, v in pairs(character:GetDescendants()) do
@@ -165,7 +159,7 @@ MainTab:CreateSlider({
 })
 
 ---------------------------------------------------
--- 🕊️ BODYVELOCITY FLY (FINAL)
+-- 🕊️ BODYVELOCITY FLY
 ---------------------------------------------------
 local flying = false
 local flySpeed = 60
@@ -179,17 +173,13 @@ local function startFly()
     if bv then bv:Destroy() end
 
     bv = Instance.new("BodyVelocity")
-    bv.Name = "CoolFly"
-    bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+    bv.MaxForce = Vector3.new(1e9,1e9,1e9)
     bv.Velocity = Vector3.zero
     bv.Parent = root
 end
 
 local function stopFly()
-    if bv then
-        bv:Destroy()
-        bv = nil
-    end
+    if bv then bv:Destroy() bv = nil end
 end
 
 RunService.RenderStepped:Connect(function()
@@ -217,6 +207,77 @@ MainTab:CreateSlider({
     CurrentValue = flySpeed,
     Callback = function(Value)
         flySpeed = Value
+    end
+})
+
+---------------------------------------------------
+-- 🌟 FULLBRIGHT (VISUAL)
+---------------------------------------------------
+local original = {
+    Brightness = Lighting.Brightness,
+    ClockTime = Lighting.ClockTime,
+    FogEnd = Lighting.FogEnd,
+    GlobalShadows = Lighting.GlobalShadows,
+    Ambient = Lighting.Ambient
+}
+
+VisualTab:CreateToggle({
+    Name = "Full Bright",
+    CurrentValue = false,
+    Callback = function(Value)
+        if Value then
+            Lighting.Brightness = 5
+            Lighting.ClockTime = 14
+            Lighting.FogEnd = 100000
+            Lighting.GlobalShadows = false
+            Lighting.Ambient = Color3.new(1,1,1)
+        else
+            for k,v in pairs(original) do
+                Lighting[k] = v
+            end
+        end
+    end
+})
+
+---------------------------------------------------
+-- 👁️ ESP (VISUAL)
+---------------------------------------------------
+local ESP = false
+
+local function addESP(char)
+    if char:FindFirstChild("ESP") then return end
+    local h = Instance.new("Highlight")
+    h.Name = "ESP"
+    h.FillColor = Color3.fromRGB(255,0,0)
+    h.OutlineColor = Color3.new(1,1,1)
+    h.Parent = char
+end
+
+local function removeESP(char)
+    local h = char:FindFirstChild("ESP")
+    if h then h:Destroy() end
+end
+
+local function updateESP()
+    for _,p in pairs(Players:GetPlayers()) do
+        if p ~= player and p.Character then
+            if ESP then addESP(p.Character) else removeESP(p.Character) end
+        end
+    end
+end
+
+Players.PlayerAdded:Connect(function(p)
+    p.CharacterAdded:Connect(function(char)
+        if ESP then addESP(char) end
+    end)
+end)
+
+VisualTab:CreateToggle({
+    Name = "ESP",
+    CurrentValue = false,
+    Callback = function(Value)
+        ESP = Value
+        updateESP()
     end
 })
 
