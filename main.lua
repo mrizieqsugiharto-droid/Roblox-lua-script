@@ -6,26 +6,113 @@ game:GetService("StarterGui"):SetCore("SendNotification", {
     Text = "Loaded successfully!",
     Duration = 5
 })
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
-local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
 
+---------------------------------------------------
+-- 📊 PREDICTOR
+---------------------------------------------------
+local predictorEnabled = false
+local ArrowsFolder = Workspace:FindFirstChild("ArrowsFolder")
+
+local PlayerGui = player:WaitForChild("PlayerGui")
+local PowerGui = PlayerGui:FindFirstChild("Power")
+
+local PowerText = nil
+if PowerGui and PowerGui:FindFirstChild("BarFrame") then
+    PowerText = PowerGui.BarFrame.TopFrame.PowerTextFrame.PowerText
+end
+
+local predictor = Instance.new("Part")
+predictor.Anchored = true
+predictor.CanCollide = false
+predictor.Shape = Enum.PartType.Cylinder
+predictor.Material = Enum.Material.Neon
+predictor.Color = Color3.fromRGB(0,255,140)
+predictor.Size = Vector3.new(2,0.2,2)
+predictor.Transparency = 1
+predictor.Parent = Workspace
+
+local a0 = Instance.new("Attachment", Workspace.Terrain)
+local a1 = Instance.new("Attachment", Workspace.Terrain)
+
+local beam = Instance.new("Beam")
+beam.Attachment0 = a0
+beam.Attachment1 = a1
+beam.Width0 = 0.25
+beam.Width1 = 0.1
+beam.Enabled = false
+beam.Parent = Workspace
+
+local data = {
+    ["Power 1"] = 0.846, ["Power 2"] = 1.2449, ["Power 3"] = 1.628,
+    ["Power 4"] = 2.04, ["Power 5"] = 2.403, ["Power 6"] = 2.77,
+    ["Power 7"] = 3.152, ["Power 8"] = 3.534, ["Power 9"] = 3.916,
+    ["Power 10"] = 4.298,
+}
+
+local smoothPos = Vector3.new()
+
+RunService.RenderStepped:Connect(function()
+    if not predictorEnabled then
+        predictor.Transparency = 1
+        beam.Enabled = false
+        return
+    end
+
+    if not ArrowsFolder or not PowerText then return end
+
+    local arrow = ArrowsFolder:FindFirstChild("LocalAimArrow")
+    if not arrow then return end
+
+    local power = data[PowerText.Text]
+    if not power then return end
+
+    beam.Enabled = true
+    predictor.Transparency = 0
+
+    local targetPos = (arrow.CFrame * CFrame.new(arrow.Size.X * power, 0, 0)).Position
+    smoothPos = smoothPos:Lerp(targetPos, 0.25)
+
+    predictor.Position = smoothPos
+    predictor.Orientation = Vector3.new(90,0,0)
+
+    a0.WorldPosition = arrow.Position
+    a1.WorldPosition = smoothPos
+end)
+
+---------------------------------------------------
 -- UI
+---------------------------------------------------
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "Cool Hub",
-   LoadingTitle = "Cool Hub",
-   LoadingSubtitle = "Keyless",
-   ConfigurationSaving = {Enabled = false}
+    Name = "Cool Hub",
+    LoadingTitle = "Cool Hub",
+    LoadingSubtitle = "Final Version",
+    ConfigurationSaving = {Enabled = false}
 })
 
 local MainTab = Window:CreateTab("Main", 4483362458)
-local VisualTab = Window:CreateTab("Visual", 4483362458)
+local Knockouttabs = Window:CreateTab("Knockout", 4483362458)
+
+---------------------------------------------------
+-- 🎯 PREDICTOR BUTTON
+---------------------------------------------------
+Knockouttabs:CreateToggle({
+    Name = "🎯 Prediction System",
+    CurrentValue = false,
+    Callback = function(Value)
+        predictorEnabled = Value
+    end
+})
 
 ---------------------------------------------------
 -- 🚪 NOCLIP
@@ -43,205 +130,94 @@ RunService.Stepped:Connect(function()
 end)
 
 MainTab:CreateToggle({
-   Name = "Noclip",
-   CurrentValue = false,
-   Callback = function(Value)
-      noclip = Value
-   end
+    Name = "Noclip",
+    CurrentValue = false,
+    Callback = function(Value)
+        noclip = Value
+    end
 })
 
 ---------------------------------------------------
--- 🎚️ WALKSPEED
+-- WALK SPEED
 ---------------------------------------------------
 MainTab:CreateSlider({
-   Name = "WalkSpeed",
-   Range = {16, 100},
-   Increment = 1,
-   CurrentValue = 16,
-   Callback = function(Value)
-      character:WaitForChild("Humanoid").WalkSpeed = Value
-   end
+    Name = "WalkSpeed",
+    Range = {16, 100},
+    Increment = 1,
+    CurrentValue = 16,
+    Callback = function(Value)
+        humanoid.WalkSpeed = Value
+    end
 })
 
 ---------------------------------------------------
--- 🦘 JUMP POWER
+-- JUMP POWER
 ---------------------------------------------------
-local humanoid = character:WaitForChild("Humanoid")
-
 MainTab:CreateSlider({
-   Name = "Jump Power",
-   Range = {50, 200},
-   Increment = 5,
-   CurrentValue = humanoid.JumpPower,
-   Callback = function(Value)
-      humanoid.UseJumpPower = true
-      humanoid.JumpPower = Value
-   end
+    Name = "Jump Power",
+    Range = {50, 200},
+    Increment = 5,
+    CurrentValue = humanoid.JumpPower,
+    Callback = function(Value)
+        humanoid.UseJumpPower = true
+        humanoid.JumpPower = Value
+    end
 })
 
 ---------------------------------------------------
--- 🕊️ CAMERA FLY (NO PIECES)
+-- 🕊️ BODYVELOCITY FLY (FINAL)
 ---------------------------------------------------
 local flying = false
-local flySpeed = 2
+local flySpeed = 60
+local bv
 local camera = workspace.CurrentCamera
 
+local function startFly()
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    if bv then bv:Destroy() end
+
+    bv = Instance.new("BodyVelocity")
+    bv.Name = "CoolFly"
+    bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+    bv.Velocity = Vector3.zero
+    bv.Parent = root
+end
+
+local function stopFly()
+    if bv then
+        bv:Destroy()
+        bv = nil
+    end
+end
+
 RunService.RenderStepped:Connect(function()
-    if flying and character then
+    if flying and bv and character then
         local root = character:FindFirstChild("HumanoidRootPart")
         if root then
-            root.CFrame = root.CFrame + (camera.CFrame.LookVector * flySpeed)
+            bv.Velocity = camera.CFrame.LookVector * flySpeed
         end
     end
 end)
 
 MainTab:CreateToggle({
-   Name = "Camera Fly",
-   CurrentValue = false,
-   Callback = function(Value)
-      flying = Value
-   end
+    Name = "BodyVelocity Fly",
+    CurrentValue = false,
+    Callback = function(Value)
+        flying = Value
+        if flying then startFly() else stopFly() end
+    end
 })
 
 MainTab:CreateSlider({
-   Name = "Fly Speed",
-   Range = {1, 10},
-   Increment = 1,
-   CurrentValue = 2,
-   Callback = function(Value)
-      flySpeed = Value
-   end
-})
-
----------------------------------------------------
--- 💀 KILL PLAYER
----------------------------------------------------
-MainTab:CreateButton({
-   Name = "Kill / Reset",
-   Callback = function()
-      local h = character:FindFirstChildOfClass("Humanoid")
-      if h then h.Health = 0 end
-   end
-})
-
----------------------------------------------------
--- 🔁 REJOIN
----------------------------------------------------
-MainTab:CreateButton({
-   Name = "Rejoin Server",
-   Callback = function()
-      TeleportService:Teleport(game.PlaceId, player)
-   end
-})
-
----------------------------------------------------
--- 💰 MONEY
----------------------------------------------------
-local function getStat(name)
-    local stats = player:FindFirstChild("leaderstats")
-    if stats then
-        return stats:FindFirstChild(name)
+    Name = "Fly Speed",
+    Range = {10, 200},
+    Increment = 5,
+    CurrentValue = flySpeed,
+    Callback = function(Value)
+        flySpeed = Value
     end
-end
-
-MainTab:CreateInput({
-   Name = "Set Money",
-   PlaceholderText = "Enter amount...",
-   Callback = function(Value)
-      local money = getStat("Money") or getStat("Cash")
-      if money and tonumber(Value) then
-         money.Value = tonumber(Value)
-         Rayfield:Notify({Title="Money Updated",Content=Value,Duration=3})
-      end
-   end
-})
-
----------------------------------------------------
--- 🌟 FULLBRIGHT (VISUAL)
----------------------------------------------------
-local original = {
-    Brightness = Lighting.Brightness,
-    ClockTime = Lighting.ClockTime,
-    FogEnd = Lighting.FogEnd,
-    GlobalShadows = Lighting.GlobalShadows,
-    Ambient = Lighting.Ambient
-}
-
-local fullbright = false
-
-VisualTab:CreateToggle({
-   Name = "Full Bright",
-   CurrentValue = false,
-   Callback = function(Value)
-      fullbright = Value
-
-      if fullbright then
-         Lighting.Brightness = 5
-         Lighting.ClockTime = 14
-         Lighting.FogEnd = 100000
-         Lighting.GlobalShadows = false
-         Lighting.Ambient = Color3.fromRGB(255,255,255)
-      else
-         Lighting.Brightness = original.Brightness
-         Lighting.ClockTime = original.ClockTime
-         Lighting.FogEnd = original.FogEnd
-         Lighting.GlobalShadows = original.GlobalShadows
-         Lighting.Ambient = original.Ambient
-      end
-   end
-})
-
----------------------------------------------------
--- 👁️ ESP (VISUAL TAB)
----------------------------------------------------
-local ESPEnabled = false
-
-local function addESP(char)
-    if char:FindFirstChild("CoolESP") then return end
-
-    local h = Instance.new("Highlight")
-    h.Name = "CoolESP"
-    h.FillColor = Color3.fromRGB(255,0,0)
-    h.OutlineColor = Color3.fromRGB(255,255,255)
-    h.FillTransparency = 0.5
-    h.Adornee = char
-    h.Parent = char
-end
-
-local function removeESP(char)
-    local esp = char:FindFirstChild("CoolESP")
-    if esp then esp:Destroy() end
-end
-
-local function updateESP()
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= player then
-            if p.Character then
-                if ESPEnabled then
-                    addESP(p.Character)
-                else
-                    removeESP(p.Character)
-                end
-            end
-        end
-    end
-end
-
-Players.PlayerAdded:Connect(function(p)
-    p.CharacterAdded:Connect(function(char)
-        if ESPEnabled then
-            addESP(char)
-        end
-    end)
-end)
-
-VisualTab:CreateToggle({
-   Name = "ESP",
-   CurrentValue = false,
-   Callback = function(Value)
-      ESPEnabled = Value
-      updateESP()
-   end
 })
 
 ---------------------------------------------------
